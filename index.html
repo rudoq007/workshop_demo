@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Sunset Across the U.S.</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/USCitiesPopulation_1.js"></script>
+        <script src="data/USCitiesSunsetTimes_2.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString') {
+              highlightLayer.setStyle({
+                color: '#fffd00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#fffd00',
+                fillOpacity: 1
+              });
+            }
+        }
+        var map = L.map('map', {
+            zoomControl:true, maxZoom:28, minZoom:1
+        }).fitBounds([[17.613451060960564,-136.24050537748892],[55.3568498962119,-54.09696744965034]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_CartoDBPositron_0');
+        map.getPane('pane_CartoDBPositron_0').style.zIndex = 400;
+        var layer_CartoDBPositron_0 = L.tileLayer('http://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png', {
+            pane: 'pane_CartoDBPositron_0',
+            opacity: 1.0,
+            attribution: '<a href="https://cartodb.com/basemaps/">Map tiles by CartoDB, under CC BY 3.0. Data by OpenStreetMap, under ODbL.</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 20
+        });
+        layer_CartoDBPositron_0;
+        map.addLayer(layer_CartoDBPositron_0);
+        function pop_USCitiesPopulation_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (i in e.target._eventParents) {
+                        e.target._eventParents[i].resetStyle(e.target);
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">City</th>\
+                        <td>' + (feature.properties['city'] !== null ? autolinker.link(feature.properties['city'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">State</th>\
+                        <td>' + (feature.properties['state_id'] !== null ? autolinker.link(feature.properties['state_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Population</th>\
+                        <td>' + (feature.properties['population'] !== null ? autolinker.link(feature.properties['population'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Density</th>\
+                        <td>' + (feature.properties['density'] !== null ? autolinker.link(feature.properties['density'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Timezone</th>\
+                        <td>' + (feature.properties['timezone'] !== null ? autolinker.link(feature.properties['timezone'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sunrise</th>\
+                        <td>' + (feature.properties['sunrise_sh'] !== null ? autolinker.link(feature.properties['sunrise_sh'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sunset</th>\
+                        <td>' + (feature.properties['sunset_sho'] !== null ? autolinker.link(feature.properties['sunset_sho'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Daylight (hours)</th>\
+                        <td>' + (feature.properties['daylight'] !== null ? autolinker.link(feature.properties['daylight'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['max_sunset'] !== null ? autolinker.link(feature.properties['max_sunset'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_USCitiesPopulation_1_0(feature) {
+            if (feature.properties['q2wHide_max_pop'] >= 0.000000 && feature.properties['q2wHide_max_pop'] <= 60.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 2.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 60.000000 && feature.properties['q2wHide_max_pop'] <= 75.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 2.5,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 75.000000 && feature.properties['q2wHide_max_pop'] <= 100.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 3.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 100.000000 && feature.properties['q2wHide_max_pop'] <= 125.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 3.5,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 125.000000 && feature.properties['q2wHide_max_pop'] <= 150.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 150.000000 && feature.properties['q2wHide_max_pop'] <= 250.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 5.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 250.000000 && feature.properties['q2wHide_max_pop'] <= 500.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 500.000000 && feature.properties['q2wHide_max_pop'] <= 1000.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 7.5,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 1000.000000 && feature.properties['q2wHide_max_pop'] <= 5000.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 9.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['q2wHide_max_pop'] >= 5000.000000 && feature.properties['q2wHide_max_pop'] <= 19000.000000 ) {
+                return {
+                pane: 'pane_USCitiesPopulation_1',
+                radius: 24.0,
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,154,34,0.4980392156862745)',
+                interactive: true,
+            }
+            }
+        }
+        map.createPane('pane_USCitiesPopulation_1');
+        map.getPane('pane_USCitiesPopulation_1').style.zIndex = 401;
+        map.getPane('pane_USCitiesPopulation_1').style['mix-blend-mode'] = 'normal';
+        var layer_USCitiesPopulation_1 = new L.geoJson(json_USCitiesPopulation_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_USCitiesPopulation_1',
+            layerName: 'layer_USCitiesPopulation_1',
+            pane: 'pane_USCitiesPopulation_1',
+            onEachFeature: pop_USCitiesPopulation_1,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_USCitiesPopulation_1_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_USCitiesPopulation_1);
+        function pop_USCitiesSunsetTimes_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (i in e.target._eventParents) {
+                        e.target._eventParents[i].resetStyle(e.target);
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">City</th>\
+                        <td>' + (feature.properties['city'] !== null ? autolinker.link(feature.properties['city'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">State</th>\
+                        <td>' + (feature.properties['state_id'] !== null ? autolinker.link(feature.properties['state_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Population</th>\
+                        <td>' + (feature.properties['population'] !== null ? autolinker.link(feature.properties['population'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Density</th>\
+                        <td>' + (feature.properties['density'] !== null ? autolinker.link(feature.properties['density'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Timezone</th>\
+                        <td>' + (feature.properties['timezone'] !== null ? autolinker.link(feature.properties['timezone'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sunrise</th>\
+                        <td>' + (feature.properties['sunrise_sh'] !== null ? autolinker.link(feature.properties['sunrise_sh'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sunset</th>\
+                        <td>' + (feature.properties['sunset_sho'] !== null ? autolinker.link(feature.properties['sunset_sho'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Daylight (hours)</th>\
+                        <td>' + (feature.properties['daylight'] !== null ? autolinker.link(feature.properties['daylight'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['max_sunset'] !== null ? autolinker.link(feature.properties['max_sunset'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_USCitiesSunsetTimes_2_0(feature) {
+            switch(String(feature.properties['max_sunset'])) {
+                case '4:15 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,0,4,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4:30 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(35,17,81,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4:45 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(94,23,127,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5:00 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(152,44,128,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5:15 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(211,66,110,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5:30 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(248,118,92,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5:45 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,187,128,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5:50 pm':
+                    return {
+                pane: 'pane_USCitiesSunsetTimes_2',
+                radius: 8.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,253,191,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_USCitiesSunsetTimes_2');
+        map.getPane('pane_USCitiesSunsetTimes_2').style.zIndex = 402;
+        map.getPane('pane_USCitiesSunsetTimes_2').style['mix-blend-mode'] = 'normal';
+        var layer_USCitiesSunsetTimes_2 = new L.geoJson(json_USCitiesSunsetTimes_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_USCitiesSunsetTimes_2',
+            layerName: 'layer_USCitiesSunsetTimes_2',
+            pane: 'pane_USCitiesSunsetTimes_2',
+            onEachFeature: pop_USCitiesSunsetTimes_2,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_USCitiesSunsetTimes_2_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_USCitiesSunsetTimes_2);
+        map.addLayer(layer_USCitiesSunsetTimes_2);
+            var title = new L.Control();
+            title.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'info');
+                this.update();
+                return this._div;
+            };
+            title.update = function () {
+                this._div.innerHTML = '<h2>Sunset Across the U.S.</h2>';
+            };
+            title.addTo(map);
+            var abstract = new L.Control({'position':'topright'});
+            abstract.onAdd = function (map) {
+                this._div = L.DomUtil.create('div',
+                'leaflet-control abstract');
+                this._div.id = 'abstract'
+                    this._div.setAttribute("onmouseenter", "abstract.show()");
+                    this._div.setAttribute("onmouseleave", "abstract.hide()");
+                    this.hide();
+                    return this._div;
+                };
+                abstract.hide = function () {
+                    this._div.classList.remove("abstractUncollapsed");
+                    this._div.classList.add("abstract");
+                    this._div.innerHTML = 'i'
+                }
+                abstract.show = function () {
+                    this._div.classList.remove("abstract");
+                    this._div.classList.add("abstractUncollapsed");
+                    this._div.innerHTML = 'When people living in the U.S.  experienced sunset on December 21,  2021 – the shortest day of the year.  Times are in Standard Time and are adjusted for local time zones.  <br /><br />Map by Rebecca M. Seifried, March 2022. Daylight times from <a href="https://sunrise-sunset.org">Sunrise-Sunset.org</a>. City point locations from the <a href="https://simplemaps.com/data/us-cities">SimpleMaps US Cities Database</a>.  ';
+            };
+            abstract.addTo(map);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var baseMaps = {};
+        L.control.layers(baseMaps,{'U.S. Cities (Sunset Times)<br /><table><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_before415pm0.png" /></td><td>before 4:15 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_415430pm1.png" /></td><td>4:15-4:30 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_430445pm2.png" /></td><td>4:30-4:45 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_445500pm3.png" /></td><td>4:45-5:00 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_500515pm4.png" /></td><td>5:00-5:15 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_515530pm5.png" /></td><td>5:15-5:30 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_530545pm6.png" /></td><td>5:30-5:45 pm</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesSunsetTimes_2_after545pm7.png" /></td><td>after 5:45 pm</td></tr></table>': layer_USCitiesSunsetTimes_2,'U.S. Cities (Population)<br /><table><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_below600000.png" /></td><td>below 60,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto750001.png" /></td><td>up to 75,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto1000002.png" /></td><td>up to 100,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto1250003.png" /></td><td>up to 125,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto1500004.png" /></td><td>up to 150,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto2500005.png" /></td><td>up to 250,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto5000006.png" /></td><td>up to 500,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto10000007.png" /></td><td>up to 1,000,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto50000008.png" /></td><td>up to 5,000,000</td></tr><tr><td style="text-align: center;"><img src="legend/USCitiesPopulation_1_upto190000009.png" /></td><td>up to 19,000,000</td></tr></table>': layer_USCitiesPopulation_1,"CartoDB Positron": layer_CartoDBPositron_0,}).addTo(map);
+        setBounds();
+        map.addControl(new L.Control.Search({
+            layer: layer_USCitiesSunsetTimes_2,
+            initial: false,
+            hideMarkerOnCollapse: true,
+            propertyName: 'city'}));
+        document.getElementsByClassName('search-button')[0].className +=
+         ' fa fa-binoculars';
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"population": "int","max_sunset": "str","state_id": "str","timezone": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_population = document.createElement("div");
+            div_population.id = "div_population";
+            div_population.className = "slider";
+            document.getElementById("menu").appendChild(div_population);
+            var lab_population = document.createElement('div');
+            lab_population.innerHTML  = 'population: <span id="val_population"></span>';
+            lab_population.className = 'filterlabel';
+            document.getElementById("menu").appendChild(lab_population);
+            var reset_population = document.createElement('div');
+            reset_population.innerHTML = 'clear filter';
+            reset_population.className = 'filterlabel';
+            lab_population.className = 'filterlabel';
+            reset_population.onclick = function() {
+                sel_population.noUiSlider.reset();
+            };
+            document.getElementById("menu").appendChild(reset_population);
+            var sel_population = document.getElementById('div_population');
+            noUiSlider.create(sel_population, {
+                connect: true,
+                start: [49848, 18713220],
+                step: 1,
+                format: wNumb({
+                    decimals: 0,
+                    }),
+                range: {
+                min: 49848,
+                max: 18713220
+                }
+            });
+            sel_population.noUiSlider.on('update', function (values) {
+            filterVals =[];
+            for (value in values){
+            filterVals.push(parseInt(value))
+            }
+            val_population = document.getElementById('val_population');
+            val_population.innerHTML = values.join(' - ');
+                filterFunc()
+            });
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_max_sunset = document.createElement('div');
+            div_max_sunset.id = "div_max_sunset";
+            div_max_sunset.className= "filterselect";
+            document.getElementById("menu").appendChild(div_max_sunset);
+            sel_max_sunset = document.createElement('select');
+            sel_max_sunset.multiple = true;
+            sel_max_sunset.size = 8;
+            sel_max_sunset.id = "sel_max_sunset";
+            var max_sunset_options_str = "<option value='' unselected></option>";
+            sel_max_sunset.onchange = function(){filterFunc()};
+            max_sunset_options_str  += '<option value="4:15 pm">4:15 pm</option>';
+            max_sunset_options_str  += '<option value="4:30 pm">4:30 pm</option>';
+            max_sunset_options_str  += '<option value="4:45 pm">4:45 pm</option>';
+            max_sunset_options_str  += '<option value="5:00 pm">5:00 pm</option>';
+            max_sunset_options_str  += '<option value="5:15 pm">5:15 pm</option>';
+            max_sunset_options_str  += '<option value="5:30 pm">5:30 pm</option>';
+            max_sunset_options_str  += '<option value="5:45 pm">5:45 pm</option>';
+            max_sunset_options_str  += '<option value="5:50 pm">5:50 pm</option>';
+            sel_max_sunset.innerHTML = max_sunset_options_str;
+            div_max_sunset.appendChild(sel_max_sunset);
+            var lab_max_sunset = document.createElement('div');
+            lab_max_sunset.innerHTML = 'max_sunset';
+            lab_max_sunset.className = 'filterlabel';
+            div_max_sunset.appendChild(lab_max_sunset);
+            var reset_max_sunset = document.createElement('div');
+            reset_max_sunset.innerHTML = 'clear filter';
+            reset_max_sunset.className = 'filterlabel';
+            reset_max_sunset.onclick = function() {
+                var options = document.getElementById("sel_max_sunset").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_max_sunset.appendChild(reset_max_sunset);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_state_id = document.createElement('div');
+            div_state_id.id = "div_state_id";
+            div_state_id.className= "filterselect";
+            document.getElementById("menu").appendChild(div_state_id);
+            sel_state_id = document.createElement('select');
+            sel_state_id.multiple = true;
+            sel_state_id.size = 10;
+            sel_state_id.id = "sel_state_id";
+            var state_id_options_str = "<option value='' unselected></option>";
+            sel_state_id.onchange = function(){filterFunc()};
+            state_id_options_str  += '<option value="AL">AL</option>';
+            state_id_options_str  += '<option value="AR">AR</option>';
+            state_id_options_str  += '<option value="AZ">AZ</option>';
+            state_id_options_str  += '<option value="CA">CA</option>';
+            state_id_options_str  += '<option value="CO">CO</option>';
+            state_id_options_str  += '<option value="CT">CT</option>';
+            state_id_options_str  += '<option value="DC">DC</option>';
+            state_id_options_str  += '<option value="DE">DE</option>';
+            state_id_options_str  += '<option value="FL">FL</option>';
+            state_id_options_str  += '<option value="GA">GA</option>';
+            state_id_options_str  += '<option value="IA">IA</option>';
+            state_id_options_str  += '<option value="ID">ID</option>';
+            state_id_options_str  += '<option value="IL">IL</option>';
+            state_id_options_str  += '<option value="IN">IN</option>';
+            state_id_options_str  += '<option value="KS">KS</option>';
+            state_id_options_str  += '<option value="KY">KY</option>';
+            state_id_options_str  += '<option value="LA">LA</option>';
+            state_id_options_str  += '<option value="MA">MA</option>';
+            state_id_options_str  += '<option value="MD">MD</option>';
+            state_id_options_str  += '<option value="ME">ME</option>';
+            state_id_options_str  += '<option value="MI">MI</option>';
+            state_id_options_str  += '<option value="MN">MN</option>';
+            state_id_options_str  += '<option value="MO">MO</option>';
+            state_id_options_str  += '<option value="MS">MS</option>';
+            state_id_options_str  += '<option value="MT">MT</option>';
+            state_id_options_str  += '<option value="NC">NC</option>';
+            state_id_options_str  += '<option value="ND">ND</option>';
+            state_id_options_str  += '<option value="NE">NE</option>';
+            state_id_options_str  += '<option value="NH">NH</option>';
+            state_id_options_str  += '<option value="NJ">NJ</option>';
+            state_id_options_str  += '<option value="NM">NM</option>';
+            state_id_options_str  += '<option value="NV">NV</option>';
+            state_id_options_str  += '<option value="NY">NY</option>';
+            state_id_options_str  += '<option value="OH">OH</option>';
+            state_id_options_str  += '<option value="OK">OK</option>';
+            state_id_options_str  += '<option value="OR">OR</option>';
+            state_id_options_str  += '<option value="PA">PA</option>';
+            state_id_options_str  += '<option value="RI">RI</option>';
+            state_id_options_str  += '<option value="SC">SC</option>';
+            state_id_options_str  += '<option value="SD">SD</option>';
+            state_id_options_str  += '<option value="TN">TN</option>';
+            state_id_options_str  += '<option value="TX">TX</option>';
+            state_id_options_str  += '<option value="UT">UT</option>';
+            state_id_options_str  += '<option value="VA">VA</option>';
+            state_id_options_str  += '<option value="VT">VT</option>';
+            state_id_options_str  += '<option value="WA">WA</option>';
+            state_id_options_str  += '<option value="WI">WI</option>';
+            state_id_options_str  += '<option value="WV">WV</option>';
+            state_id_options_str  += '<option value="WY">WY</option>';
+            sel_state_id.innerHTML = state_id_options_str;
+            div_state_id.appendChild(sel_state_id);
+            var lab_state_id = document.createElement('div');
+            lab_state_id.innerHTML = 'state_id';
+            lab_state_id.className = 'filterlabel';
+            div_state_id.appendChild(lab_state_id);
+            var reset_state_id = document.createElement('div');
+            reset_state_id.innerHTML = 'clear filter';
+            reset_state_id.className = 'filterlabel';
+            reset_state_id.onclick = function() {
+                var options = document.getElementById("sel_state_id").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_state_id.appendChild(reset_state_id);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_timezone = document.createElement('div');
+            div_timezone.id = "div_timezone";
+            div_timezone.className= "filterselect";
+            document.getElementById("menu").appendChild(div_timezone);
+            sel_timezone = document.createElement('select');
+            sel_timezone.multiple = true;
+            sel_timezone.size = 9;
+            sel_timezone.id = "sel_timezone";
+            var timezone_options_str = "<option value='' unselected></option>";
+            sel_timezone.onchange = function(){filterFunc()};
+            timezone_options_str  += '<option value="America/Boise">America/Boise</option>';
+            timezone_options_str  += '<option value="America/Chicago">America/Chicago</option>';
+            timezone_options_str  += '<option value="America/Denver">America/Denver</option>';
+            timezone_options_str  += '<option value="America/Detroit">America/Detroit</option>';
+            timezone_options_str  += '<option value="America/Indiana/Indianapolis">America/Indiana/Indianapolis</option>';
+            timezone_options_str  += '<option value="America/Los_Angeles">America/Los_Angeles</option>';
+            timezone_options_str  += '<option value="America/Matamoros">America/Matamoros</option>';
+            timezone_options_str  += '<option value="America/New_York">America/New_York</option>';
+            timezone_options_str  += '<option value="America/Phoenix">America/Phoenix</option>';
+            sel_timezone.innerHTML = timezone_options_str;
+            div_timezone.appendChild(sel_timezone);
+            var lab_timezone = document.createElement('div');
+            lab_timezone.innerHTML = 'timezone';
+            lab_timezone.className = 'filterlabel';
+            div_timezone.appendChild(lab_timezone);
+            var reset_timezone = document.createElement('div');
+            reset_timezone.innerHTML = 'clear filter';
+            reset_timezone.className = 'filterlabel';
+            reset_timezone.onclick = function() {
+                var options = document.getElementById("sel_timezone").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_timezone.appendChild(reset_timezone);
+        </script>
+    </body>
+</html>
